@@ -1,0 +1,10 @@
+{
+  "name": "lean-mode",
+  "version": "0.1.0",
+  "description": "Token-efficiency skill for coding agents: RTK shell-output filtering, caveman-ultra output compression, and entire-graph search-first code navigation, plus a delegation rule that pushes both compressions into every subagent prompt.",
+  "author": { "name": "Suhaan Thayyil", "url": "https://github.com/suhaanthayyil" },
+  "homepage": "https://github.com/suhaanthayyil/lean-mode",
+  "repository": "https://github.com/suhaanthayyil/lean-mode",
+  "license": "MIT",
+  "keywords": ["tokens", "efficiency", "context", "code-graph", "rtk", "caveman", "entire-graph"]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "lean-mode",
+  "description": "Token-efficiency skill for coding agents (RTK + caveman-ultra + entire-graph search-first).",
+  "owner": { "name": "Suhaan Thayyil", "url": "https://github.com/suhaanthayyil" },
+  "plugins": [
+    {
+      "name": "lean-mode",
+      "description": "Set up and enforce the token-efficiency stack: RTK, caveman-ultra output compression, entire-graph search-first navigation.",
+      "author": "Suhaan Thayyil",
+      "category": "productivity",
+      "homepage": "https://github.com/suhaanthayyil/lean-mode",
+      "source": "./"
+    }
+  ]
+}
