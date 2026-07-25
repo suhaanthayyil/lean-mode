@@ -14,12 +14,26 @@ description: >
 Three independent layers. Each degrades gracefully: if a tool is absent, **skip it silently —
 never install it.** Verify, use what's present, report what's missing once.
 
-**Measured, not assumed** (`bench/`, 24 runs, sonnet, 3 per cell): search-first is **−12.2% real
-tokens** aggregate and **−23.7% on multi-hop exploration**, but **−2.8% cost (near noise)** and
-**+15.5% total tokens** — this doctrine block itself costs ~1.5k tokens per prompt. So: apply it to
-exploration-heavy work; on a task that already names its file, rule 5 below (skip the graph) is the
-token-optimal move, not a formality. caveman-ultra measured **+0.1% output tokens = no effect** on
-volume; keep it for readability/context hygiene, not as a token lever.
+**Measured, not assumed** (120 runs, sonnet, n=6/cell, median — `bench/VERDICT.md` in the repo):
+the win is **task-shaped, not uniform**.
+
+| task type | Δtotal tokens |
+|---|---|
+| impact / who-calls | **−37%** (only result exceeding its own spread) |
+| multi-hop explain | **−67%** (base thrashes; direction clear) |
+| plain locate | −7% |
+| task already names the file | **+35% WORSE** — rule 5 below is the token-optimal move, not a formality |
+| mixed set (aggregate) | **−17%** total, −12% cost, −17% turns |
+
+Two things that are counter-intuitive and both measured:
+- **Turn count is the lever, not prose length.** The −17% comes from cutting median turns 3.0 → 2.5;
+  on the multi-hop task 7 → 2 turns gave −67%. Every extra turn re-reads the whole context.
+- **Telling the model to be terse does NOT cut output tokens** (measured +14% to +23% — it complies
+  with the style and then says more). Only shrinking the *tool surface* cut output (−26%). Keep
+  caveman-ultra for readability and context hygiene; do not count it as a token lever.
+- **A shorter doctrine is not automatically cheaper.** Cache reads bill at 0.1×, but only if the block
+  caches at all — below the model's minimum cacheable prefix (1024 tokens on Sonnet) caching silently
+  no-ops and the tokens bill at full 1.0×.
 
 ## Setup (idempotent)
 
@@ -109,6 +123,9 @@ Other flags that matter: `--max-context-bytes N`, `--depth 1|2`, `--internal-onl
 ### Hard rules (each violation costs real money)
 1. **SEARCH FIRST** — no grep/find/cat to locate code before searching.
 2. **ONE search, then act.** Second search only if the first clearly missed.
+2b. **Answer from the search output when it already suffices.** `--format agent` returns file:line
+   *plus a code snippet*; if that answers the task, answer with **no further tool call**. This is the
+   single highest-measured lever (turns 7 → 2 = −67% total tokens on a multi-hop task).
 3. After search: read a **line range (~120 lines max)** around the reported line, then edit.
 4. **Never read a whole file to explore.**
 5. **Do not chain** `search → def → callers` to "explore the tool" — the #1 measured waste.
