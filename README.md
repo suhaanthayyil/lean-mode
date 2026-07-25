@@ -3,17 +3,18 @@
 A token-efficiency skill for coding agents. Three independent layers, each measured, each
 optional:
 
-| layer | what it does | claimed effect | status |
+| layer | what it does | upstream claim | what **this repo measured** |
 |---|---|---|---|
-| **RTK** | filters/compacts shell output before it reaches the model | ~95% on shell ops | upstream claim, not independently verified here |
-| **caveman-ultra** | compresses the agent's own prose output | ~75% fewer output tokens | upstream claim, not independently verified here |
-| **entire-graph** | search-first code navigation instead of grep/read exploration | ~50% session-token cut | upstream claim (`entire graph agent-guide`), not independently verified here |
+| **RTK** | filters/compacts shell output before it reaches the model | ~95% on shell ops | **not measured** (not exercised by the benchmark below) |
+| **caveman-ultra** | compresses the agent's own prose output | ~75% fewer output tokens | **+0.1% output tokens — no effect** |
+| **entire-graph** | search-first code navigation instead of grep/read exploration | ~50% session-token cut | **−12.2% real tokens**, −2.8% cost, **+15.5% total tokens** |
 
-> **Honesty note.** The three percentages above are the *upstream* claims of each tool, not
-> measurements taken by this repo. The only numbers this repo has independently measured are the
-> `--format` deltas in [The measured bits](#the-measured-bits) (−81% / −86%, exact byte counts).
-> An end-to-end A/B benchmark of the doctrine is in progress; this table will be replaced with
-> measured means ± spread when it lands. Treat unverified claims as unverified.
+> **Read this before believing any percentage.** The upstream column is what each tool claims.
+> The right-hand column is what an honest A/B on this repo actually produced — and it does **not**
+> reproduce the headline claims. The win is real but narrow: it concentrates on
+> exploration-heavy tasks and is partly cancelled by the cost of the doctrine prompt itself.
+> Full method, per-task numbers and limits: [`bench/`](bench/) — the harness is shipped so you can
+> re-run it and disagree with me.
 
 Plus the lever most people miss: a **delegation rule** that pushes both compressions into every
 subagent/workflow prompt you author — subagent return text is injected into the parent context,

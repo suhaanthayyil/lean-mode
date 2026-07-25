@@ -1,10 +1,10 @@
 ---
 name: lean-mode
 description: >
-  Set up and enforce the token-efficiency stack for this machine: RTK (shell-output filter,
-  ~95% saving on shell ops), caveman-ultra output compression (~75% fewer output tokens), and
-  entire-graph search-first code navigation (replaces grep/read exploration, measured ~50%
-  session-token cut). Use when the user says "lean mode", "token efficiency", "set up rtk /
+  Set up and enforce the token-efficiency stack for this machine: RTK (shell-output filter),
+  caveman-ultra output compression, and entire-graph search-first code navigation instead of
+  grep/whole-file exploration (measured here: -12% real tokens overall, -24% on exploration-heavy
+  tasks; see bench/). Use when the user says "lean mode", "token efficiency", "set up rtk /
   caveman / entire graph", "reduce token usage", "make agents cheaper", or invokes /lean-mode.
   Also apply when starting heavy exploration or delegation work in a repo.
 ---
@@ -13,6 +13,13 @@ description: >
 
 Three independent layers. Each degrades gracefully: if a tool is absent, **skip it silently —
 never install it.** Verify, use what's present, report what's missing once.
+
+**Measured, not assumed** (`bench/`, 24 runs, sonnet, 3 per cell): search-first is **−12.2% real
+tokens** aggregate and **−23.7% on multi-hop exploration**, but **−2.8% cost (near noise)** and
+**+15.5% total tokens** — this doctrine block itself costs ~1.5k tokens per prompt. So: apply it to
+exploration-heavy work; on a task that already names its file, rule 5 below (skip the graph) is the
+token-optimal move, not a formality. caveman-ultra measured **+0.1% output tokens = no effect** on
+volume; keep it for readability/context hygiene, not as a token lever.
 
 ## Setup (idempotent)
 

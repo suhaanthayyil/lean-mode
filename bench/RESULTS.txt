@@ -1,0 +1,31 @@
+lean-mode A/B — source: /Users/suhaan/devenv/graphloop-build/leanbench/results
+
+T1 locate (graph-favourable)
+  base n=3  real=   13958 (spread    149)  total=  108141  out=   383  $0.1161  turns=3.0
+  lean n=3  real=   12215 (spread   1487)  total=  132048  out=   531  $0.1149  turns=3.7
+  Δ lean vs base:  real -12.5%   total +22.1%   out +38.4%   cost -1.0%   [SIGNAL: |Δreal|=1742 vs spread=1487]
+
+T2 impact/who-calls
+  base n=3  real=    9945 (spread   1260)  total=   92332  out=   311  $0.0878  turns=2.7
+  lean n=3  real=    9767 (spread    629)  total=   69705  out=   166  $0.0790  turns=2.0
+  Δ lean vs base:  real -1.8%   total -24.5%   out -46.7%   cost -10.0%   [WITHIN NOISE: |Δreal|=178 vs spread=1260]
+
+T3 multi-hop explain
+  base n=3  real=   19931 (spread   2994)  total=  207586  out=  1667  $0.1915  turns=7.3
+  lean n=3  real=   15209 (spread   1732)  total=  260019  out=  1586  $0.1799  turns=7.0
+  Δ lean vs base:  real -23.7%   total +25.3%   out -4.9%   cost -6.1%   [SIGNAL: |Δreal|=4722 vs spread=2994]
+
+T4 file already named (CONTROL — lean predicts no gain)
+  base n=3  real=   11383 (spread    486)  total=   93745  out=   400  $0.0972  turns=2.7
+  lean n=3  real=   11306 (spread    348)  total=  117989  out=   483  $0.1051  turns=3.3
+  Δ lean vs base:  real -0.7%   total +25.9%   out +20.8%   cost +8.1%   [WITHIN NOISE: |Δreal|=77 vs spread=486]
+
+AGGREGATE (unweighted mean of per-task means)
+  base real=   13804  total=   125451  out=   690  $0.1232
+  lean real=   12124  total=   144940  out=   691  $0.1198
+  Δ real  -12.2%
+  Δ total +15.5%
+  Δ out   +0.1%
+  Δ cost  -2.8%
+
+no errored runs.
