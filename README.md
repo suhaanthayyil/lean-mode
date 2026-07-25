@@ -5,16 +5,24 @@ optional:
 
 | layer | what it does | upstream claim | what **this repo measured** |
 |---|---|---|---|
-| **RTK** | filters/compacts shell output before it reaches the model | ~95% on shell ops | **not measured** (not exercised by the benchmark below) |
-| **caveman-ultra** | compresses the agent's own prose output | ~75% fewer output tokens | **+0.1% output tokens — no effect** |
-| **entire-graph** | search-first code navigation instead of grep/read exploration | ~50% session-token cut | **−12.2% real tokens**, −2.8% cost, **+15.5% total tokens** |
+| **entire-graph** | search-first navigation + turn minimisation instead of grep/whole-file exploration | ~50% session-token cut | **−17.3% total tokens / −12.3% cost** on a mixed task set; **−33% to −67% on impact & multi-hop tasks**; **~0 to +35% (worse) on trivial named-file tasks** |
+| **caveman-ultra** | compresses the agent's own prose output | ~75% fewer output tokens | **no effect — output went UP (+14% to +23%)**. Only cutting the *tool surface* reduced output (−25.6%) |
+| **RTK** | filters/compacts shell output before it reaches the model | ~95% on shell ops | **not measured** (not exercised by the benchmark) |
 
-> **Read this before believing any percentage.** The upstream column is what each tool claims.
-> The right-hand column is what an honest A/B on this repo actually produced — and it does **not**
-> reproduce the headline claims. The win is real but narrow: it concentrates on
-> exploration-heavy tasks and is partly cancelled by the cost of the doctrine prompt itself.
-> Full method, per-task numbers and limits: [`bench/`](bench/) — the harness is shipped so you can
-> re-run it and disagree with me.
+> **Read this before believing any percentage.** 120 measured runs (sonnet, n=6/cell, median) say the
+> upstream headline claims do **not** hold as stated. What you actually buy depends entirely on the
+> task: big wins on exploration-heavy work, a net *loss* on tasks that already name their file — so
+> the "skip the graph when the file is named" rule is the token-optimal move, not boilerplate.
+>
+> Two findings that invalidated my own earlier numbers, both documented in [`bench/VERDICT.md`](bench/VERDICT.md):
+> **(a)** `real` (cache_creation+input+output) is a *contaminated* metric — the ~8.8k harness prefix
+> flips between `cache_creation` and `cache_read` on run timing, not treatment, so the −12.2% I first
+> published was partly artifact. Everything is now reported in `total` / `$cost` / `output` / `turns`.
+> **(b)** a *tiny* instruction block has **no** cache discount: below the model's minimum cacheable
+> prefix (1024 tokens on Sonnet) caching silently no-ops and those tokens bill at full 1.0×.
+>
+> The harness, scorer, raw results and the floor measurement are all shipped in [`bench/`](bench/) so
+> you can re-run it and disagree with me.
 
 Plus the lever most people miss: a **delegation rule** that pushes both compressions into every
 subagent/workflow prompt you author — subagent return text is injected into the parent context,

@@ -1,0 +1,10 @@
+Irreducible-prefix / cache-warmth measurement (same harness, trivial no-tool task, sonnet):
+  run 1: real=8767  (cache_creation=8760, in=2, out=5)  cost=$0.0608  turns=1   <- COLD cache
+  run 2: real=7     (cache_creation=0,    in=2, out=5)  cost=$0.0103  turns=1   <- WARM cache
+
+=> The ~8.8k harness prefix (system prompt + tool schemas) is billed as cache_creation on a cold
+   cache and as cache_read on a warm one. Therefore `real` (= cache_creation+input+output) swings by
+   ~8.8k purely on run interleaving/timing, NOT on the treatment. Any A/B headline stated in `real`
+   tokens is contaminated. Use `total` (prefix counted exactly once either way), `$cost`, `output`
+   and `turns` instead. This is why bench/RESULTS.txt (v1, real-based) was superseded by
+   RESULTS-v2.txt (total-based, median-of-6).

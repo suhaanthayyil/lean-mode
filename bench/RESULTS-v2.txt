@@ -1,0 +1,40 @@
+lean-mode bench — MEDIAN of n runs — results2
+
+T1 locate
+  base   n=6 total= 108054(±   319) $0.1153 out=  342 turns=3.0 cold=6/6
+  lean1  n=6 total= 107349(± 74833) $0.1050 out=  414 turns=3.0 cold=6/6  Δtotal -0.7% noise
+  lean3  n=6 total= 106042(±109392) $0.1015 out=  450 turns=3.0 cold=6/6  Δtotal -1.9% noise
+  lean5  n=6 total= 100772(± 34361) $0.0969 out=  292 turns=3.0 cold=6/6  Δtotal -6.7% noise
+
+T2 impact
+  base   n=6 total= 104128(± 35661) $0.0939 out=  367 turns=3.0 cold=6/6
+  lean1  n=6 total=  69820(± 36384) $0.0799 out=  186 turns=2.0 cold=6/6  Δtotal -32.9% noise
+  lean3  n=6 total=  69076(±   459) $0.0765 out=  170 turns=2.0 cold=6/6  Δtotal -33.7% noise
+  lean5  n=6 total=  65730(±    60) $0.0751 out=  131 turns=2.0 cold=6/6  Δtotal -36.9% SIG
+
+T3 multi-hop
+  base   n=6 total= 211420(±357605) $0.2339 out= 1760 turns=7.0 cold=4/6
+  lean1  n=6 total= 221790(± 41713) $0.1673 out= 1499 turns=6.0 cold=6/6  Δtotal +4.9% noise
+  lean3  n=6 total=  69962(± 36485) $0.0853 out=  510 turns=2.0 cold=6/6  Δtotal -66.9% noise
+  lean5  n=6 total= 100545(± 34988) $0.0975 out=  566 turns=3.0 cold=6/6  Δtotal -52.4% noise
+
+T4 named-file CONTROL
+  base   n=6 total= 104708(± 69213) $0.0977 out=  414 turns=3.0 cold=6/6
+  lean1  n=6 total= 107004(± 36091) $0.1044 out=  477 turns=3.0 cold=6/6  Δtotal +2.2% noise
+  lean3  n=6 total= 141220(±106505) $0.1137 out=  554 turns=4.0 cold=6/6  Δtotal +34.9% noise
+  lean5  n=6 total=  99890(± 33961) $0.0933 out=  290 turns=3.0 cold=6/6  Δtotal -4.6% noise
+
+AGGREGATE — median-of-medians across tasks
+  base   total= 106381 $0.1065 out=  390 turns=3.0
+  lean1  total= 107177 $0.1047 out=  445 turns=3.0   Δtotal +0.7%  Δcost -1.7%  Δout +14.0%  Δturns +0.0%
+  lean3  total=  88002 $0.0934 out=  480 turns=2.5   Δtotal -17.3%  Δcost -12.3%  Δout +22.9%  Δturns -16.7%
+  lean5  total= 100218 $0.0951 out=  290 turns=3.0   Δtotal -5.8%  Δcost -10.7%  Δout -25.6%  Δturns +0.0%
+
+GOAL: -30% (which metrics clear it?)
+  best arm = lean3
+    total tokens  -17.3%  
+    cost          -12.3%  
+    output        +22.9%  
+    turns         -16.7%  
+
+no errored runs.
