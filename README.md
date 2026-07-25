@@ -98,11 +98,22 @@ Two findings that are easy to get wrong, both measured on a 73-file Go repo:
 `agent` beats the even-smaller `text` in practice: `text` is locations-only, so it forces an
 extra file read. `agent` keeps the snippet, and the top hit is often enough to edit from.
 
-**2. There is no `entire graph impact` subcommand.** Blast radius is:
+**2. Pick the right impact command for the question.** Both exist; they answer different things
+(byte counts measured on the same symbol):
 
 ```bash
+# "who calls X" — narrowest and cheapest (291 B)
 entire graph neighbors --repo . --symbol X --relation CALLS --direction in --format agent
+
+# "what breaks if I change X" — one call for the full blast radius: callers, callees, type
+# consumers, data flow, co-changing files (1740 B, replaces several queries)
+entire graph impact --repo . --symbol X --format text
 ```
+
+An earlier version of this file claimed `entire graph impact` did not exist. That was wrong: the
+subcommand is in `internal/cli/root.go`, and the error came from a **stale installed binary**
+predating it. If `entire graph impact` reports `unknown command`, rebuild and reinstall the plugin
+rather than working around it.
 
 ## Optional dependencies
 

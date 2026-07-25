@@ -68,5 +68,6 @@ echo
 echo "reminders:"
 echo "  - SEARCH FIRST; one search, then read a ~120-line range and edit."
 echo "  - ALWAYS --format agent --top-k 5 (default json is ~5x bigger: 9610B vs 1866B measured)"
-echo "  - NO 'entire graph impact' subcommand — impact = neighbors --relation CALLS --direction in"
+echo "  - who-calls-X = neighbors --relation CALLS --direction in (291B); blast radius = impact (1740B)"
+echo "  - 'unknown command impact' means a STALE installed binary — rebuild + entire plugin install"
 echo "  - bake caveman-ultra + rtk directives into every subagent/workflow prompt you author."

@@ -94,8 +94,11 @@ see below):
 entire graph search --repo . --profile full --format agent --top-k 5 \
   --query "<task or bug in one sentence>"
 
-# impact / who calls X    (NOTE: there is NO `entire graph impact` subcommand)
+# "who calls X" — narrowest, cheapest (291 B measured)
 entire graph neighbors --repo . --symbol X --relation CALLS --direction in --format agent
+
+# "what breaks if I change X" — full blast radius in ONE call (1740 B, replaces several queries)
+entire graph impact --repo . --symbol X --format text
 
 # what changed
 entire graph diff --base A --head B --json
