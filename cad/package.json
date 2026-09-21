@@ -1,0 +1,12 @@
+{
+  "name": "vex-robot-cad",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Parametric CAD model of the team's VEX V5 competition robot",
+  "scripts": {
+    "export": "node export/export-stl.mjs",
+    "check": "node export/check.mjs"
+  },
+  "devDependencies": { "three": "^0.169.0" }
+}

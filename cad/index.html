@@ -1,0 +1,698 @@
+<title>Tower Conveyor V5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --paper:#e8edf2; --panel:#ffffff; --panel-2:#f3f6f9;
+  --ink:#141b23; --ink-2:#3f4d5c; --muted:#6b7b8c; --rule:#ccd6df; --rule-2:#e2e9ef;
+  --stage-a:#dee6ed; --stage-b:#b2bfcb;
+  --grid:#93a5b5; --grid-2:#bcc8d3;
+  --accent:#c8102e; --accent-ink:#ffffff; --accent-soft:#f7dee2;
+  --cool:#2f6fd0; --good:#1c7a4b; --warn:#a86a10;
+  --shadow:0 1px 2px rgba(20,27,35,.10), 0 8px 24px -12px rgba(20,27,35,.22);
+  --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --cond:"Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0b1016; --panel:#141c25; --panel-2:#1a242f;
+    --ink:#e7eef5; --ink-2:#b6c4d2; --muted:#8395a6; --rule:#2a3642; --rule-2:#202b36;
+    --stage-a:#161f29; --stage-b:#080c11;
+    --grid:#31404f; --grid-2:#1e2833;
+    --accent:#ef4a62; --accent-ink:#1a0407; --accent-soft:#2e1319;
+    --cool:#629bf0; --good:#3ba873; --warn:#d69a33;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -14px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0b1016; --panel:#141c25; --panel-2:#1a242f;
+  --ink:#e7eef5; --ink-2:#b6c4d2; --muted:#8395a6; --rule:#2a3642; --rule-2:#202b36;
+  --stage-a:#161f29; --stage-b:#080c11;
+  --grid:#31404f; --grid-2:#1e2833;
+  --accent:#ef4a62; --accent-ink:#1a0407; --accent-soft:#2e1319;
+  --cool:#629bf0; --good:#3ba873; --warn:#d69a33;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -14px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:14px; line-height:1.45;
+  overflow:hidden;
+}
+#app{position:fixed; inset:0; padding-top:env(safe-area-inset-top,0px);
+     padding-bottom:env(safe-area-inset-bottom,0px); display:flex; flex-direction:column}
+
+/* ---------- title bar ---------- */
+#bar{
+  display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+  padding:10px 16px; border-bottom:1px solid var(--rule); background:var(--panel);
+  position:relative; z-index:5;
+}
+#bar h1{
+  font-family:var(--cond); font-weight:700; font-size:22px; letter-spacing:.055em;
+  text-transform:uppercase; margin:0; color:var(--ink);
+}
+#bar .sub{font-size:12px; color:var(--muted)}
+#bar .tag{
+  font-family:var(--mono); font-size:10.5px; font-weight:600; letter-spacing:.09em;
+  text-transform:uppercase; padding:3px 8px; border:1px solid var(--rule);
+  border-radius:2px; color:var(--ink-2); background:var(--panel-2);
+}
+#bar .tag.ok{color:var(--good); border-color:color-mix(in srgb, var(--good) 40%, var(--rule))}
+#bar .spacer{flex:1 1 auto}
+
+/* ---------- stage ---------- */
+#main{flex:1 1 auto; position:relative; min-height:0; display:flex}
+#stage{position:absolute; inset:0}
+#stage canvas{display:block; width:100%; height:100%; touch-action:none}
+
+.panel{
+  background:color-mix(in srgb, var(--panel) 88%, transparent);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border:1px solid var(--rule); border-radius:3px; box-shadow:var(--shadow);
+}
+#rail, #tblock{position:absolute; z-index:3; max-height:calc(100% - 24px); overflow:auto; overscroll-behavior:contain}
+#rail{left:12px; top:12px; width:214px; padding:4px 0}
+#tblock{right:12px; top:12px; width:272px}
+
+.sect{padding:10px 12px; border-bottom:1px solid var(--rule-2)}
+.sect:last-child{border-bottom:0}
+.sect h2{
+  font-family:var(--cond); font-weight:600; font-size:12px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--muted); margin:0 0 8px;
+}
+
+/* ---------- controls ---------- */
+.rows{display:flex; flex-direction:column; gap:2px}
+.row{
+  display:flex; align-items:center; gap:8px; width:100%; text-align:left;
+  padding:5px 6px; border:0; border-radius:2px; background:transparent;
+  color:var(--ink); font:inherit; font-size:13px; cursor:pointer;
+}
+.row:hover{background:var(--panel-2)}
+.row:focus-visible{outline:2px solid var(--cool); outline-offset:-1px}
+.row .sw{width:9px; height:9px; border-radius:1px; flex:0 0 auto; border:1px solid rgba(0,0,0,.18)}
+.row .n{margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--muted);
+        font-variant-numeric:tabular-nums}
+.row[aria-pressed="false"]{color:var(--muted)}
+.row[aria-pressed="false"] .sw{opacity:.22}
+
+.chips{display:flex; flex-wrap:wrap; gap:4px}
+.chip{
+  font-family:var(--cond); font-size:13px; font-weight:600; letter-spacing:.06em;
+  text-transform:uppercase; padding:4px 9px; border:1px solid var(--rule);
+  border-radius:2px; background:var(--panel-2); color:var(--ink-2); cursor:pointer;
+}
+.chip:hover{border-color:var(--ink-2); color:var(--ink)}
+.chip:focus-visible{outline:2px solid var(--cool); outline-offset:1px}
+.chip[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+
+.slider{display:flex; align-items:center; gap:9px}
+.slider input[type=range]{flex:1; accent-color:var(--accent); min-width:0}
+.slider .v{font-family:var(--mono); font-size:11px; color:var(--muted); width:30px;
+           text-align:right; font-variant-numeric:tabular-nums}
+
+/* ---------- titleblock data ---------- */
+dl.kv{display:flex; flex-direction:column; gap:7px; margin:0}
+dl.kv dt{
+  font-family:var(--cond); font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--muted);
+}
+dl.kv dd{margin:1px 0 0; font-family:var(--mono); font-size:11.5px; line-height:1.5;
+         font-variant-numeric:tabular-nums; color:var(--ink)}
+
+.dims{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:9px}
+.dim{border:1px solid var(--rule-2); border-radius:2px; padding:6px 7px; background:var(--panel-2)}
+.dim .lab{font-family:var(--cond); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+.dim .val{font-family:var(--mono); font-size:15px; font-weight:600; font-variant-numeric:tabular-nums;
+          line-height:1.2; letter-spacing:-.02em}
+.dim .mm{font-family:var(--mono); font-size:10px; color:var(--muted)}
+.cube{display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--muted)}
+.cube .bar{flex:1; height:5px; background:var(--rule-2); border-radius:3px; overflow:hidden; position:relative}
+.cube .bar i{display:block; height:100%; background:var(--good); border-radius:3px}
+
+table.bom{width:100%; border-collapse:collapse; font-size:11.5px}
+table.bom th{
+  font-family:var(--cond); font-weight:600; font-size:11px; letter-spacing:.11em;
+  text-transform:uppercase; color:var(--muted); text-align:left;
+  border-bottom:1px solid var(--rule); padding:0 0 4px;
+}
+table.bom th.q{text-align:right}
+table.bom td{padding:3px 0; border-bottom:1px solid var(--rule-2); vertical-align:top}
+table.bom td.q{font-family:var(--mono); text-align:right; font-variant-numeric:tabular-nums;
+               color:var(--ink-2); padding-left:8px; white-space:nowrap}
+table.bom tr:last-child td{border-bottom:0}
+
+/* ---------- readout strip ---------- */
+#readout{
+  position:absolute; left:12px; bottom:12px; z-index:3; display:flex; align-items:center;
+  gap:10px; padding:7px 12px; max-width:calc(100% - 24px);
+}
+#readout .lab{font-family:var(--cond); font-size:11px; letter-spacing:.13em;
+              text-transform:uppercase; color:var(--muted); white-space:nowrap}
+#readout .nm{font-size:12.5px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+#readout .mm{font-family:var(--mono); font-size:11px; color:var(--muted); white-space:nowrap;
+             font-variant-numeric:tabular-nums}
+#readout .dot{width:6px; height:6px; border-radius:50%; background:var(--accent); flex:0 0 auto}
+
+/* ---------- loading ---------- */
+#load{
+  position:absolute; inset:0; z-index:9; display:grid; place-content:center; gap:10px;
+  justify-items:center; background:var(--paper); color:var(--muted);
+}
+#load .t{font-family:var(--cond); font-size:15px; letter-spacing:.16em; text-transform:uppercase}
+#load .p{width:180px; height:3px; background:var(--rule-2); border-radius:3px; overflow:hidden}
+#load .p i{display:block; height:100%; width:30%; background:var(--accent); border-radius:3px;
+           animation:sweep 1.05s ease-in-out infinite}
+@keyframes sweep{0%{transform:translateX(-110%)}100%{transform:translateX(440%)}}
+#load .e{font-family:var(--mono); font-size:11.5px; color:var(--accent); max-width:min(520px,86vw);
+         text-align:center; line-height:1.6}
+@media (prefers-reduced-motion: reduce){ #load .p i{animation:none; width:100%} }
+
+/* ---------- phone ---------- */
+#sheettabs{display:none}
+@media (max-width: 860px){
+  #rail,#tblock{
+    position:static; width:auto; max-height:none; border:0; border-radius:0;
+    box-shadow:none; background:var(--panel); backdrop-filter:none;
+  }
+  #main{flex-direction:column}
+  #stage{position:relative; inset:auto; flex:1 1 auto; min-height:46vh}
+  #sheet{
+    flex:0 0 auto; max-height:44vh; overflow:auto; border-top:1px solid var(--rule);
+    background:var(--panel); -webkit-overflow-scrolling:touch;
+  }
+  #sheettabs{
+    display:flex; gap:4px; padding:7px 12px; border-bottom:1px solid var(--rule-2);
+    position:sticky; top:0; background:var(--panel); z-index:2;
+  }
+  #readout{position:static; margin:0; border:0; border-radius:0; box-shadow:none;
+           background:var(--panel-2); border-top:1px solid var(--rule-2); max-width:none}
+  #bar h1{font-size:18px}
+}
+</style>
+
+<div id="app">
+  <header id="bar">
+    <h1>Tower Conveyor V5</h1>
+    <span class="sub">VEX V5RC &middot; parametric assembly model</span>
+    <span class="spacer"></span>
+    <span class="tag" id="tagTris">building&hellip;</span>
+    <span class="tag ok" id="tagLegal">&mdash;</span>
+  </header>
+
+  <div id="main">
+    <div id="stage"></div>
+
+    <div id="sheet">
+      <div id="sheettabs">
+        <button class="chip" data-tab="rail" aria-pressed="true">Controls</button>
+        <button class="chip" data-tab="tblock" aria-pressed="false">Spec &amp; BOM</button>
+      </div>
+
+      <aside id="rail" class="panel">
+        <div class="sect">
+          <h2>Subsystems</h2>
+          <div class="rows" id="subs"></div>
+        </div>
+        <div class="sect">
+          <h2>Exploded view</h2>
+          <div class="slider">
+            <input type="range" id="explode" min="0" max="100" value="0" step="1" aria-label="Exploded view amount">
+            <span class="v" id="explodeV">0%</span>
+          </div>
+        </div>
+        <div class="sect">
+          <h2>Motion</h2>
+          <div class="chips">
+            <button class="chip" id="run" aria-pressed="false">Run</button>
+            <button class="chip" id="spinView" aria-pressed="false">Orbit</button>
+          </div>
+        </div>
+        <div class="sect">
+          <h2>View</h2>
+          <div class="chips" id="views">
+            <button class="chip" data-view="iso">Iso</button>
+            <button class="chip" data-view="front">Front</button>
+            <button class="chip" data-view="right">Right</button>
+            <button class="chip" data-view="top">Top</button>
+            <button class="chip" data-view="rear">Rear</button>
+          </div>
+        </div>
+        <div class="sect">
+          <h2>Display</h2>
+          <div class="chips">
+            <button class="chip" id="tCube" aria-pressed="true">18&quot; cube</button>
+            <button class="chip" id="tGrid" aria-pressed="true">Grid</button>
+            <button class="chip" id="tGhost" aria-pressed="false">X-ray</button>
+            <button class="chip" id="tEdge" aria-pressed="false">Edges</button>
+          </div>
+        </div>
+      </aside>
+
+      <aside id="tblock" class="panel">
+        <div class="sect">
+          <h2>Envelope</h2>
+          <div class="dims" id="dims"></div>
+          <div class="cube">
+            <span>vs 18&quot; cube</span>
+            <span class="bar"><i id="cubeBar" style="width:0%"></i></span>
+            <span id="cubePct">&mdash;</span>
+          </div>
+        </div>
+        <div class="sect">
+          <h2>Drivetrain &amp; motion</h2>
+          <dl class="kv" id="specs"></dl>
+        </div>
+        <div class="sect">
+          <h2>Bill of materials</h2>
+          <table class="bom"><thead><tr><th>Part</th><th class="q">Qty</th></tr></thead>
+            <tbody id="bom"></tbody></table>
+        </div>
+      </aside>
+
+      <div id="readout" class="panel">
+        <span class="dot"></span>
+        <span class="lab">Part</span>
+        <span class="nm" id="roName">Click any part to inspect it</span>
+        <span class="mm" id="roDim"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="load">
+    <div class="t">Generating geometry</div>
+    <div class="p"><i></i></div>
+    <div class="e" id="loadErr" hidden></div>
+  </div>
+</div>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { buildRobot } from './lib/robot.js';
+import * as C from './lib/vex-constants.js';
+
+const $ = (id) => document.getElementById(id);
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const MM = 25.4;
+
+/* ---------------------------------------------------------------- *
+ * scene
+ * ---------------------------------------------------------------- */
+const stage = $('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.02;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, 1, 0.5, 400);
+camera.up.set(0, 0, 1);                       // Z is up, as in the model
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+controls.minDistance = 8;
+controls.maxDistance = 130;
+controls.target.set(0, 0, 7.5);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.05).texture;
+scene.environmentIntensity = 0.62;
+
+const key = new THREE.DirectionalLight(0xffffff, 2.1);
+key.position.set(16, 14, 26);
+const fill = new THREE.DirectionalLight(0xdce7f5, 0.85);
+fill.position.set(-20, -8, 12);
+const rim = new THREE.DirectionalLight(0xffe8d8, 0.7);
+rim.position.set(-6, -22, 16);
+scene.add(key, fill, rim, new THREE.AmbientLight(0xffffff, 0.22));
+
+/* gradient backdrop, regenerated whenever the theme changes */
+const bgCanvas = document.createElement('canvas');
+bgCanvas.width = 4; bgCanvas.height = 512;
+const bgTex = new THREE.CanvasTexture(bgCanvas);
+bgTex.colorSpace = THREE.SRGBColorSpace;
+scene.background = bgTex;
+
+/* 0.5" VEX hole-pitch floor grid */
+const grid = new THREE.GridHelper(64, 128);
+grid.rotation.x = Math.PI / 2;
+grid.position.z = -0.02;
+grid.material.transparent = true;
+grid.material.opacity = 0.5;
+scene.add(grid);
+const grid2 = new THREE.GridHelper(64, 16);
+grid2.rotation.x = Math.PI / 2;
+grid2.position.z = -0.015;
+grid2.material.transparent = true;
+grid2.material.opacity = 0.85;
+scene.add(grid2);
+
+/* soft contact shadow under the robot */
+const shCanvas = document.createElement('canvas');
+shCanvas.width = shCanvas.height = 256;
+{
+  const g = shCanvas.getContext('2d');
+  const rad = g.createRadialGradient(128, 128, 8, 128, 128, 126);
+  rad.addColorStop(0, 'rgba(0,0,0,0.42)');
+  rad.addColorStop(0.55, 'rgba(0,0,0,0.16)');
+  rad.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = rad; g.fillRect(0, 0, 256, 256);
+}
+const contact = new THREE.Mesh(
+  new THREE.PlaneGeometry(22, 23),
+  new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(shCanvas), transparent: true, depthWrite: false }));
+contact.position.z = 0.004;
+scene.add(contact);
+
+function applyTheme() {
+  const g = bgCanvas.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, 0, 512);
+  grad.addColorStop(0, css('--stage-a'));
+  grad.addColorStop(1, css('--stage-b'));
+  g.fillStyle = grad; g.fillRect(0, 0, 4, 512);
+  bgTex.needsUpdate = true;
+  grid.material.color.set(css('--grid-2'));
+  grid2.material.color.set(css('--grid'));
+  if (cube) cube.material.color.set(css('--muted'));
+  if (edges) edges.material.color.set(css('--ink-2'));
+  dimSprites.forEach((s) => s.userData.redraw());
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+/* ---------------------------------------------------------------- *
+ * build
+ * ---------------------------------------------------------------- */
+let B, robot, cube = null, edges = null, loop = null, chainCentre = [0, 0];
+const dimSprites = [];
+const spinners = [], flights = [];
+const groups = {};
+
+function dimSprite(text, sub) {
+  const cv = document.createElement('canvas');
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+  const sp = new THREE.Sprite(mat);
+  sp.renderOrder = 10;
+  sp.userData.redraw = () => {
+    const dpr = 2, W = 300, H = 96;
+    cv.width = W * dpr; cv.height = H * dpr;
+    const g = cv.getContext('2d');
+    g.scale(dpr, dpr); g.clearRect(0, 0, W, H);
+    g.textAlign = 'center';
+    g.fillStyle = css('--ink');
+    g.font = '600 40px "IBM Plex Mono", monospace';
+    g.fillText(text, W / 2, 44);
+    g.fillStyle = css('--muted');
+    g.font = '500 24px "Barlow Condensed", sans-serif';
+    g.fillText(sub, W / 2, 74);
+    tex.needsUpdate = true;
+  };
+  sp.userData.redraw();
+  sp.scale.set(3.5, 1.12, 1);
+  dimSprites.push(sp);
+  return sp;
+}
+
+function start() {
+  B = buildRobot();
+  robot = B.root;
+  loop = B.chainLoop;
+  chainCentre = B.chainCentre;
+  scene.add(robot);
+
+  let tris = 0;
+  robot.traverse((o) => {
+    if (!o.isMesh) return;
+    o.userData.home = o.position.clone();
+    if (o.userData.spin) spinners.push(o);
+    if (o.userData.chainS !== undefined) flights.push(o);
+    const p = o.geometry.attributes.position;
+    const n = (o.geometry.index ? o.geometry.index.count : p.count) / 3;
+    tris += n * (o.isInstancedMesh ? o.count : 1);
+  });
+  for (const g of robot.children) groups[g.name] = g;
+
+  /* 18" starting cube, sitting on the floor around the robot */
+  const e = B.envelope, box = e.box;
+  const cx = (box.min.x + box.max.x) / 2, cy = (box.min.y + box.max.y) / 2;
+  const L = C.SIZE_LIMIT;
+  cube = new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.BoxGeometry(L, L, L)),
+    new THREE.LineBasicMaterial({ color: css('--muted'), transparent: true, opacity: 0.55 }));
+  cube.position.set(cx, cy, L / 2);
+  scene.add(cube);
+
+  const dW = dimSprite(e.width.toFixed(2) + '"', (e.width * MM).toFixed(0) + ' mm / WIDTH');
+  dW.position.set(cx, box.min.y - 3.0, 0.7);
+  const dL = dimSprite(e.length.toFixed(2) + '"', (e.length * MM).toFixed(0) + ' mm / LENGTH');
+  dL.position.set(box.max.x + 3.4, cy, 0.7);
+  const dH = dimSprite(e.height.toFixed(2) + '"', (e.height * MM).toFixed(0) + ' mm / HEIGHT');
+  dH.position.set(box.max.x + 3.4, box.min.y - 3.0, e.height);
+  scene.add(dW, dL, dH);
+
+  /* --- UI ------------------------------------------------------- */
+  $('tagTris').textContent = Math.round(tris).toLocaleString() + ' triangles';
+  const legal = $('tagLegal');
+  legal.textContent = e.legal ? 'Fits the 18" cube' : 'Over size limit';
+  legal.className = 'tag ' + (e.legal ? 'ok' : '');
+
+  const SUB = {
+    drivetrain: ['Drivetrain', '--cool'], frame: ['Chassis frame', '--muted'],
+    tower: ['Tower & conveyor', '--accent'], intake: ['Intake', '--warn'],
+    electronics: ['V5 electronics', '--good'], fasteners: ['Fasteners', '--ink-2'],
+  };
+  $('subs').innerHTML = Object.keys(SUB).filter((k) => groups[k]).map((k) => {
+    const n = groups[k].children.reduce((a, o) => a + (o.isInstancedMesh ? o.count : 1), 0);
+    return `<button class="row" data-sub="${k}" aria-pressed="true">
+      <span class="sw" style="background:var(${SUB[k][1]})"></span>
+      <span>${SUB[k][0]}</span><span class="n">${n}</span></button>`;
+  }).join('');
+  $('subs').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-sub]'); if (!b) return;
+    const on = b.getAttribute('aria-pressed') !== 'true';
+    b.setAttribute('aria-pressed', String(on));
+    groups[b.dataset.sub].visible = on;
+  });
+
+  $('dims').innerHTML = [['W', e.width], ['L', e.length], ['H', e.height]]
+    .map(([k, v]) => `<div class="dim"><div class="lab">${k}</div>
+      <div class="val">${v.toFixed(2)}<span style="font-size:10px">in</span></div>
+      <div class="mm">${(v * MM).toFixed(0)} mm</div></div>`).join('');
+  const worst = Math.max(e.width, e.length, e.height) / C.SIZE_LIMIT;
+  $('cubeBar').style.width = Math.min(100, worst * 100).toFixed(1) + '%';
+  $('cubeBar').style.background = worst <= 1 ? 'var(--good)' : 'var(--accent)';
+  $('cubePct').textContent = (worst * 100).toFixed(0) + '%';
+
+  $('specs').innerHTML = B.notes.filter((n) => n.k !== 'Envelope')
+    .map((n) => `<dt>${n.k}</dt><dd>${n.v}</dd>`).join('');
+
+  $('bom').innerHTML = [...B.bom.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([p, n]) => `<tr><td>${p}</td><td class="q">${n}</td></tr>`).join('');
+
+  /* --- edges overlay (built lazily, it is the expensive one) ---- */
+  $('tEdge').addEventListener('click', () => {
+    const on = $('tEdge').getAttribute('aria-pressed') !== 'true';
+    $('tEdge').setAttribute('aria-pressed', String(on));
+    if (on && !edges) {
+      const segs = [];
+      robot.traverse((o) => {
+        if (!o.isMesh || o.isInstancedMesh) return;
+        if (o.geometry.attributes.position.count > 9000) return;   // skip the heaviest
+        const eg = new THREE.EdgesGeometry(o.geometry, 32);
+        const pos = eg.attributes.position.array;
+        const v = new THREE.Vector3();
+        for (let i = 0; i < pos.length; i += 3) {
+          v.set(pos[i], pos[i + 1], pos[i + 2]).applyMatrix4(o.matrixWorld);
+          segs.push(v.x, v.y, v.z);
+        }
+      });
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(segs, 3));
+      edges = new THREE.LineSegments(g, new THREE.LineBasicMaterial({
+        color: css('--ink-2'), transparent: true, opacity: 0.38 }));
+      scene.add(edges);
+    }
+    if (edges) edges.visible = on;
+  });
+
+  applyTheme();
+  view('iso', false);
+  $('load').remove();
+}
+
+/* ---------------------------------------------------------------- *
+ * controls
+ * ---------------------------------------------------------------- */
+const VIEWS = {
+  iso:   [27, -34, 23], front: [0, -48, 8.5], right: [50, 0, 8.5],
+  top:   [0.01, -0.01, 56], rear: [0, 48, 9.5],
+};
+function view(name, animate = true) {
+  const p = new THREE.Vector3().fromArray(VIEWS[name]);
+  const t = new THREE.Vector3(0, 0, name === 'top' ? 5 : 7.5);
+  document.querySelectorAll('#views .chip').forEach((c) =>
+    c.setAttribute('aria-pressed', String(c.dataset.view === name)));
+  if (!animate) { camera.position.copy(p); controls.target.copy(t); controls.update(); return; }
+  const p0 = camera.position.clone(), t0 = controls.target.clone(), t1 = performance.now();
+  (function step() {
+    const k = Math.min(1, (performance.now() - t1) / 520);
+    const e = 1 - Math.pow(1 - k, 3);
+    camera.position.lerpVectors(p0, p, e);
+    controls.target.lerpVectors(t0, t, e);
+    controls.update();
+    if (k < 1) requestAnimationFrame(step);
+  })();
+}
+$('views').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-view]'); if (b) view(b.dataset.view);
+});
+
+let explodeT = 0;
+$('explode').addEventListener('input', (ev) => {
+  explodeT = +ev.target.value / 100;
+  $('explodeV').textContent = ev.target.value + '%';
+  robot.traverse((o) => {
+    if (!o.isMesh || !o.userData.home) return;
+    const e = o.userData.explode || [0, 0, 0];
+    o.position.set(
+      o.userData.home.x + e[0] * explodeT,
+      o.userData.home.y + e[1] * explodeT,
+      o.userData.home.z + e[2] * explodeT);
+  });
+  if (edges) edges.visible = false;
+});
+
+let running = false, orbiting = false, ghost = false;
+const toggle = (el, fn) => el.addEventListener('click', () => {
+  const on = el.getAttribute('aria-pressed') !== 'true';
+  el.setAttribute('aria-pressed', String(on));
+  fn(on);
+});
+toggle($('run'), (on) => { running = on; });
+toggle($('spinView'), (on) => { orbiting = on; });
+toggle($('tCube'), (on) => { if (cube) cube.visible = on; dimSprites.forEach((s) => (s.visible = on)); });
+toggle($('tGrid'), (on) => { grid.visible = grid2.visible = contact.visible = on; });
+toggle($('tGhost'), (on) => {
+  ghost = on;
+  const seen = new Set();
+  robot.traverse((o) => {
+    if (!o.isMesh || seen.has(o.material)) return;
+    seen.add(o.material);
+    o.material.transparent = on;
+    o.material.opacity = on ? 0.3 : 1;
+    o.material.depthWrite = !on;
+    o.material.needsUpdate = true;
+  });
+});
+
+document.getElementById('sheettabs').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-tab]'); if (!b) return;
+  document.querySelectorAll('#sheettabs .chip').forEach((c) => {
+    const on = c === b;
+    c.setAttribute('aria-pressed', String(on));
+    document.getElementById(c.dataset.tab).hidden = !on;
+  });
+});
+function syncSheet() {
+  const phone = innerWidth <= 860;
+  $('rail').hidden = phone && document.querySelector('#sheettabs .chip[aria-pressed="true"]')?.dataset.tab !== 'rail';
+  $('tblock').hidden = phone && document.querySelector('#sheettabs .chip[aria-pressed="true"]')?.dataset.tab !== 'tblock';
+  if (!phone) { $('rail').hidden = false; $('tblock').hidden = false; }
+}
+
+/* --- click to inspect ------------------------------------------- */
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let down = null;
+renderer.domElement.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5 || !robot) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObject(robot, true).find((h) => h.object.visible);
+  if (!hit) { $('roName').textContent = 'Click any part to inspect it'; $('roDim').textContent = ''; return; }
+  const o = hit.object;
+  if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+  const s = o.geometry.boundingBox.getSize(new THREE.Vector3());
+  $('roName').textContent = o.name + '  \u2014  ' + (o.userData.subsystem || '');
+  $('roDim').textContent = [s.x, s.y, s.z].map((v) => v.toFixed(2)).join(' × ') + ' in'
+    + '   (' + [s.x, s.y, s.z].map((v) => (v * MM).toFixed(0)).join(' × ') + ' mm)';
+});
+
+/* ---------------------------------------------------------------- *
+ * loop
+ * ---------------------------------------------------------------- */
+function resize() {
+  const w = stage.clientWidth || 1, h = stage.clientHeight || 1;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  syncSheet();
+}
+addEventListener('resize', resize);
+
+const clock = new THREE.Clock();
+let t = 0;
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (running) {
+    t += dt;
+    for (const o of spinners) {
+      const s = o.userData.spin;
+      o.rotation.x = s.base + s.dir * (s.rpm / 60) * Math.PI * 2 * t * 0.10;
+    }
+    if (loop) {
+      const travel = B.chainSpeed * t * 0.10;
+      for (const f of flights) {
+        const p = loop.at(f.userData.chainS + travel);
+        let nx = -Math.sin(p.dir), ny = Math.cos(p.dir);
+        if ((p.y - chainCentre[0]) * nx + (p.z - chainCentre[1]) * ny < 0) { nx = -nx; ny = -ny; }
+        const out = f.userData.chainOut;
+        f.position.set(f.position.x, p.y + nx * out, p.z + ny * out);
+        f.rotation.x = Math.atan2(ny, nx) - Math.PI / 2;
+      }
+    }
+  }
+  if (orbiting) {
+    const a = dt * 0.22, c = Math.cos(a), s = Math.sin(a);
+    const x = camera.position.x - controls.target.x, y = camera.position.y - controls.target.y;
+    camera.position.x = controls.target.x + x * c - y * s;
+    camera.position.y = controls.target.y + x * s + y * c;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+});
+
+/* boot: paint the loading state first, then build */
+resize();
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  try { start(); resize(); }
+  catch (err) {
+    console.error(err);
+    const e = $('loadErr');
+    e.hidden = false;
+    e.textContent = 'Could not build the model: ' + (err && err.message ? err.message : err);
+    document.querySelector('#load .p').hidden = true;
+  }
+}));
+</script>
