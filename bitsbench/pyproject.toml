@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bitsbench"
+version = "0.1.0"
+description = "BITS-Bench: measuring how well language-model agents gather and use information in active discovery"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = ["numpy>=1.24", "pandas>=2.0"]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=1.0"]
+openai = ["openai>=1.40"]
+plots = ["matplotlib>=3.7"]
+dev = ["pytest>=7", "matplotlib>=3.7"]
+all = ["anthropic>=1.0", "openai>=1.40", "matplotlib>=3.7"]
+
+[project.scripts]
+bitsbench = "bitsbench.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

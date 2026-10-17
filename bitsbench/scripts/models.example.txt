@@ -1,0 +1,6 @@
+# One model per line: provider:model-id|effort|label   (effort may be empty)
+# providers: anthropic, openai, compat (any OpenAI-compatible endpoint; set BASE_URL)
+anthropic:<model-id>|high|anthropic-large-high
+anthropic:<model-id>|low|anthropic-large-low
+openai:<model-id>|high|openai-large-high
+compat:<org/model>||open-weights

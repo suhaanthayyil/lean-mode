@@ -1,0 +1,299 @@
+% BITS-Bench: ICML submission draft.
+% To build with the official template, replace the \documentclass/\usepackage block below with the
+% ICML style files (icml20XX.sty, icml20XX.bst) and \usepackage[accepted]{icml20XX} as instructed in
+% the call for papers. Everything marked \todo{} needs LLM results that `scripts/run_grid.sh` produces.
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{natbib}
+\usepackage{enumitem}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{definition}{Definition}
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\Hs}{\mathcal{H}}
+\newcommand{\X}{\mathcal{X}}
+\newcommand{\Y}{\mathcal{Y}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\bench}{\textsc{BITS-Bench}}
+
+\title{\bench: Separating Information Gathering from Inference\\in Language-Model Discovery Agents}
+\author{Anonymous Authors}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Language-model agents are increasingly asked to do science: choose experiments, interpret their
+outcomes, and arrive at a correct theory. When such an agent fails, it is usually impossible to say
+whether it ran the wrong experiments or drew the wrong conclusions from the right ones, because
+end-to-end benchmarks have no ground truth for what an ideal reasoner could have concluded from the
+agent's own data. We introduce \bench{}, a benchmark of active rule discovery in which every hidden
+rule is drawn uniformly from a finite, fully enumerated hypothesis space of up to $3\times10^5$
+semantically distinct rules across four domains (number concepts, Boolean functions, regular
+languages and list programs), with budgets of 8--24 experiments and an optional noisy-oracle regime.
+Exact Bayesian inference over these spaces yields, for every agent and every checkpoint, the
+information its experiments gathered in bits and the accuracy of the Bayes-optimal learner given
+those same experiments. The agent's shortfall from a greedy expected-information-gain reference then
+decomposes \emph{exactly} into a \emph{gathering regret} and an \emph{inference regret}, the latter
+non-negative in expectation, both for prediction and for exact identification of the rule. With
+perfect inference, random experimentation recovers most of the reference's predictive accuracy but
+identifies the rule only 15--69\% of the time on binary domains, versus 87--100\% for the reference:
+the identification track is where experimental design matters. \todo{One or two sentences of headline
+LLM findings: e.g.\ fraction of total regret due to inference vs gathering for frontier models; rate of
+logically entailed (zero-information) experiments; whether choosing their own experiments helps
+models relative to random data.}
+\end{abstract}
+
+\section{Introduction}
+
+A recurring hope for capable AI systems is that they will accelerate research: propose hypotheses,
+design experiments, and revise beliefs in light of results. Recent benchmarks evaluate this end to
+end. ASI-Bench \citep{asibench2026} grades agents on project-level research tasks under decreasing
+methodological guidance and finds that performance drops sharply when agents must choose methods
+themselves; DiscoveryWorld \citep{jansen2024discoveryworld}, BoxingGym \citep{gandhi2025boxinggym},
+ACED-Bench \citep{acedbench2026} and ActiveSciBench \citep{autoscilab2026} place agents in simulated
+environments where they must experiment to discover hidden laws. These benchmarks establish that
+current agents are weak experimenters. They do not establish \emph{why}.
+
+Two failure modes are confounded in any end-to-end score. An agent may \emph{gather} too little
+information (redundant, confirmatory, or uninformative experiments), or it may \emph{use} the
+information it gathered poorly (failing to rule out hypotheses its data contradicts, or over-committing
+to ones it does not support). The remedies differ (better exploration policies versus better
+inductive inference), so the distinction matters for both evaluation and method development. Making it
+requires knowing what an ideal reasoner could have concluded from the agent's \emph{own} data. In
+open-ended environments this is unknowable.
+
+\bench{} makes it knowable by construction. Each task is a black box computing a rule drawn uniformly at
+random from a finite hypothesis class that we enumerate completely and tell the agent about precisely.
+The agent chooses inputs, observes outputs, and periodically predicts the rule's outputs on held-out
+inputs; at the end it states the rule. Because the hypothesis space is explicit, the exact posterior
+after any experiment sequence is computable, and with it the Bayes-optimal predictions, the information
+gained in bits, and the expected information gain of every experiment the agent \emph{could} have run.
+
+\paragraph{Contributions.}
+\begin{enumerate}[leftmargin=*,itemsep=2pt]
+\item A benchmark of ten configurations over four formal domains with hypothesis spaces of $2^{4.7}$ to
+$2^{18.3}$ rules, a noisy-oracle variant, procedurally generated episodes with a private test salt, and
+three conditions (active, passive-random, passive-EIG) (\S\ref{sec:bench}).
+\item An exact decomposition of an agent's regret relative to a strong reference experimenter into
+gathering and inference components, for both prediction and identification, with inference regret
+provably non-negative in expectation (\S\ref{sec:metrics}).
+\item Per-experiment diagnostics that are only available with exact posteriors: the information gain of
+each chosen experiment relative to the best available one, and the rate of \emph{entailed}
+experiments whose outcome was already determined by earlier results.
+\item Reference results showing that predictive accuracy is a poor discriminator of experimental
+design while exact identification is a sharp one (\S\ref{sec:refs}), and an evaluation of
+\todo{N} language models \todo{(\S\ref{sec:llm})}.
+\end{enumerate}
+
+\section{Related work}
+
+\paragraph{Optimal experimental design and active learning.} Choosing experiments to maximise expected
+information gain dates to \citet{lindley1956}; see \citet{chaloner1995} and \citet{rainforth2024} for
+reviews. For noise-free identification over a finite hypothesis class, the greedy most-informative
+query is generalised binary search, whose expected number of queries is within a logarithmic factor of
+optimal \citep{dasgupta2004greedy,golovin2011adaptive}. Version spaces \citep{mitchell1982} are the
+noise-free posterior supports we track.
+
+\paragraph{Human hypothesis testing.} Our number domain extends Tenenbaum's number game
+\citep{tenenbaum1999bayesian} with an explicit hypothesis class. People choosing tests famously prefer
+cases they expect to confirm their current hypothesis \citep{wason1960,klayman1987confirmation};
+information-gain models of human question asking are reviewed by \citet{coenen2019asking}. Our entailed-experiment
+rate measures an extreme form of this bias: tests whose outcome is logically determined.
+
+\paragraph{LLM information gathering.} Twenty-questions-style evaluations and methods
+\citep{bedllm2025,asig2026} study question asking with EIG rewards; WILT \citep{banatt2024wilt} adapts
+the Wason 2-4-6 task; QuestBench \citep{li2025questbench} evaluates asking for missing information.
+BoxingGym \citep{gandhi2025boxinggym} also uses EIG, estimated by sampling, to score experimental design
+in probabilistic-model environments. \bench{} differs in computing posteriors \emph{exactly} over
+enumerated spaces, which is what makes the regret decomposition exact and the inference term provably
+non-negative, and in scoring identification and prediction on the same episodes.
+
+\paragraph{Scientific-discovery agents.} ASI-Bench \citep{asibench2026}, DiscoveryWorld
+\citep{jansen2024discoveryworld}, DiscoverPhysics \citep{discoverphysics2026}, ACED-Bench
+\citep{acedbench2026} and HypoArena \citep{hypoarena2026} evaluate open-ended discovery. These are
+complementary: they are realistic but unable to attribute failure; \bench{} is formal but fully
+attributable. Program-induction benchmarks such as list functions \citep{rule2020child} and ARC
+\citep{chollet2019measure} evaluate passive induction from given examples; our passive conditions are
+of this kind.
+
+\section{The benchmark}\label{sec:bench}
+
+\paragraph{Setup.} A configuration fixes an input space $\X$, an output space $\Y$, a finite hypothesis
+class $\Hs \subseteq \Y^{\X}$ of semantically distinct functions, an experiment budget $B$, and an
+observation-noise rate $\epsilon$. An episode draws a target $h^\star \sim \mathrm{Unif}(\Hs)$ and a
+set of $n$ test inputs from a fixed distribution $D$ over $\X$, independently of $h^\star$. The agent is
+given an exact natural-language specification of $\Hs$ and of the uniform prior. At steps
+$t=1,\dots,B$ it chooses $x_t\in\X$ and observes $y_t = h^\star(x_t)$, flipped with probability
+$\epsilon$ in noisy binary configurations. After $k\in\{B/8,B/4,B/2,B\}$ experiments it predicts
+$h^\star$ on the test inputs; after $B$ it also states a rule.
+
+\paragraph{Domains.} Table~\ref{tab:refs} lists the ten configurations. \emph{Numbers}: $\X=\{1..100\}$,
+rules are one atomic property (residues modulo 2--10, thresholds, primality, squares, digit
+membership, digit-sum parity and thresholds, tens digit; each possibly negated) or the AND/OR of two.
+\emph{Boolean}: $\X=\{0,1\}^8$; conjunctions/disjunctions of $\le 3$ literals, extended with 2-term DNF
+and 2-clause CNF. \emph{Regular}: strings over $\{a,b\}$ of length 1--8; languages of DFAs with $\le 3$
+or $\le 4$ states. \emph{Lists}: lists of 1--6 digits; pipelines of up to three of 26 primitives
+(sorting, filtering, arithmetic modulo 10, reductions, \dots). Binary rules are restricted to positive
+rates in $[0.1,0.9]$. Hypotheses that agree on all of $\X$ (for lists, on all lists of length $\le 3$
+plus 400 fixed longer lists) are merged, keeping the shortest description, so the prior is uniform
+over distinct functions. Sizes are pinned by regression tests.
+
+\paragraph{Protocol details.} Each checkpoint is answered in a fork of the conversation (the history
+plus one turn) that is then discarded, so the test inputs never enter the history from which the agent
+experiments and cannot be queried. Every message restates all results so far, so the benchmark does not
+test long-context recall. Malformed experiments may be retried twice before the step is forfeited.
+Submitted rules are compiled (restricted Python expressions, regular expressions or DFAs, DSL
+pipelines) and counted correct iff equivalent to $h^\star$ on all of $\X$.
+
+\paragraph{Conditions.} In \emph{active} episodes the agent chooses its experiments. In
+\emph{passive-random} and \emph{passive-EIG} episodes it sees the first $k$ results of the random or
+greedy-EIG reference experimenter and only predicts. Since experiments are chosen from past
+observations only, the posterior is the same however they were chosen, so all three conditions share
+the same Bayes-optimal reference for a given dataset.
+
+\paragraph{Splits.} Episodes are generated deterministically from a hash of
+(split, salt, domain, level, $\epsilon$, index). The dev split (30 episodes per configuration; 390 with
+the noisy suite) uses a public salt. The test split uses a private salt, so fresh instances can be
+drawn for every evaluation and memorising released episodes does not help.
+
+\section{Measuring gathering and inference}\label{sec:metrics}
+
+Let $D_k = ((x_1,y_1),\dots,(x_k,y_k))$ be the agent's first $k$ observations and
+$p(h\mid D_k)\propto \prod_{t\le k} p(y_t\mid h(x_t))$ the exact posterior under the uniform prior.
+
+\begin{definition}[Information and Bayes accuracy]
+The information gathered is $I(D_k) = \log_2|\Hs| - H[p(\cdot\mid D_k)]$ bits. The Bayes predictor
+outputs $\hat y^{B}_i = \arg\max_y p(h(x_i)=y\mid D_k)$ on test input $x_i$; its realised accuracy is
+$\mathrm{acc}^B(D_k)$.
+\end{definition}
+
+Let $R_k$ denote the accuracy of the Bayes predictor on the data collected by a reference experimenter
+in $k$ steps (averaged over reference runs). For an agent with realised accuracy $\mathrm{acc}_k$:
+\begin{equation}\label{eq:decomp}
+\underbrace{R_k - \mathrm{acc}_k}_{\text{total regret}}
+= \underbrace{R_k - \mathrm{acc}^B(D_k)}_{\text{gathering regret}}
++ \underbrace{\mathrm{acc}^B(D_k) - \mathrm{acc}_k}_{\text{inference regret}} .
+\end{equation}
+
+\begin{proposition}\label{prop:infer}
+If the agent's predictions depend on $h^\star$ only through $D_k$, then
+$\E[\mathrm{acc}^B(D_k) - \mathrm{acc}_k \mid D_k, x_{1:n}] \ge 0$.
+\end{proposition}
+\begin{proof}
+Given $D_k$ and the test inputs (drawn independently of $h^\star$), $h^\star \sim p(\cdot\mid D_k)$
+because the target is drawn from the stated prior. Any prediction $\hat y_i$ that is conditionally
+independent of $h^\star$ is correct with probability $p(h^\star(x_i)=\hat y_i\mid D_k) \le
+\max_y p(h^\star(x_i)=y\mid D_k)$, which is the probability that $\hat y^B_i$ is correct. Average over
+$i$.
+\end{proof}
+The forked checkpoints guarantee the condition: the agent never sees test labels. Gathering regret, in
+contrast, can be negative, since greedy EIG is not optimal in every episode.
+
+\paragraph{Identification.} The Bayes-optimal guess of the rule is the MAP hypothesis, correct with
+probability $m(D_k) = \max_h p(h\mid D_k)$. With $M_B$ the reference's MAP mass and $c\in\{0,1\}$
+whether the agent's stated rule is exactly right,
+$M_B - c = (M_B - m(D_B)) + (m(D_B) - c)$, and $\E[m(D_B) - c\mid D_B]\ge 0$ by the same argument.
+
+\paragraph{Scores.} \emph{Predict} is accuracy above the prior baseline as a fraction of the
+reference's, $(\overline{\mathrm{acc}} - \overline{\mathrm{acc}}_0)/(\overline{R} -
+\overline{\mathrm{acc}}_0)$, averaged over checkpoints (an area under the learning curve).
+\emph{Discover} is $\bar c / \bar M_B$. Both are computed per configuration and averaged with equal
+weight; the headline \bench{} score is their mean. We also report \emph{information efficiency}
+$\sum I(D_k)/\sum I(D^{\mathrm{ref}}_k)$ and \emph{design efficiency}
+$(I - I^{\mathrm{rand}})/(I^{\mathrm{ref}} - I^{\mathrm{rand}})$, negative when an agent's experiments are
+less informative than random ones.
+
+\paragraph{Per-experiment diagnostics.} For each experiment $x_t$ we compute its expected information
+gain $\mathrm{EIG}_t(x_t)$ under $p(\cdot\mid D_{t-1})$ and the best available
+$\max_x \mathrm{EIG}_t(x)$. Their ratio measures myopic design quality. In noise-free configurations an
+experiment with $\mathrm{EIG}_t(x_t)=0$ while the rule is still undetermined is \emph{entailed}: its
+outcome was already implied by earlier results. On the noise-free dev configurations, random
+experimenters spend 16\% of their open-question experiments on entailed tests and attain 0.66 of the
+best available information gain per experiment; greedy EIG runs none.
+
+\section{Reference results}\label{sec:refs}
+
+\begin{table}[t]
+\centering
+\small
+\input{tables/reference.tex}
+\caption{Reference experimenters with exact Bayesian inference on the dev split (30 episodes per
+configuration). Accuracy is the area under the learning curve over the four checkpoints; ``identified''
+is the posterior mass of the MAP rule after the full budget $B$.}
+\label{tab:refs}
+\end{table}
+
+Table~\ref{tab:refs} shows two regimes. On the binary domains, random experiments with perfect
+inference achieve predictive accuracy within 0.03--0.04 of greedy EIG, because a random input to a
+balanced rule already yields close to one bit. They gather substantially fewer bits by the end of the
+budget, however (e.g.\ 9.8 vs 13.7 of 14.1 on numbers/L2), and the last few bits are exactly what
+separates a nearly-right theory from the right one: random experimentation identifies the rule in
+15--69\% of episodes versus 87--100\% for the reference. On list programs, where each output carries many
+bits, both experimenters identify the rule almost always and the remaining difficulty is inferential.
+Observation noise lowers identification for both and widens the gap in bits. This motivates reporting
+prediction and identification separately: a benchmark that scored only prediction would barely
+distinguish a random experimenter from a near-optimal one.
+
+\section{Evaluating language models}\label{sec:llm}
+
+\paragraph{Models and settings.} \todo{List models (frontier models from several providers at two
+reasoning-effort levels, smaller models from the same families, and open-weight models via vLLM), reasoning
+settings, max output tokens, number of episodes; all runs use \texttt{scripts/run\_grid.sh}.}
+
+\paragraph{Main results.} \todo{Leaderboard table from \texttt{reports/dev/leaderboard.tex}: BITS score,
+Predict, Discover, gathering/inference regrets for both tracks, information and design efficiency,
+entailed-experiment rate. Learning-curve figure \texttt{curves.png} and decomposition figure
+\texttt{decomposition.png}.}
+
+\paragraph{Analyses.}
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+\item \textbf{Where does the regret come from?} \todo{Share of total regret that is inference vs.\
+gathering, per domain and per model.}
+\item \textbf{Does choosing experiments help the model?} \todo{Compare active vs passive-random accuracy
+for each model. For the Bayes learner, active-EIG beats random by the margins in Table~\ref{tab:refs};
+does the same hold for models, or do they learn more from random data than from their own?}
+\item \textbf{Can models exploit ideal data?} \todo{Passive-EIG inference regret: how much of the
+information in near-optimal experiments the model uses.}
+\item \textbf{Scaling with hypothesis entropy.} \todo{Regret vs.\ $\log_2|\Hs|$ across configurations.}
+\item \textbf{Noise.} \todo{Noisy vs noise-free L1; do models repeat experiments to average out noise?}
+\item \textbf{Confirmation and entailed tests.} \todo{Entailed-experiment rate and EIG ratio per model;
+qualitative examples from transcripts.}
+\item \textbf{Reasoning effort.} \todo{Effort sweep: which regret component additional thinking
+reduces.}
+\item \textbf{Human baseline.} \todo{Optional: \texttt{bitsbench play} on a subset of episodes.}
+\end{itemize}
+
+\section{Limitations}
+
+The rule families are formal and small by design, since exact posteriors require enumerable spaces.
+\bench{} isolates a precondition for automated research (efficient, correct learning from self-chosen
+experiments) and does not measure research ability as such. Greedy EIG is a strong reference but not an
+upper bound on information gathered; the decomposition's guarantee concerns the inference term. Telling
+the agent the exact hypothesis class and prior is a strong simplification of real science, where
+hypothesis-space construction is itself the hard part \citep{hypoarena2026}; we view \bench{} as
+complementary to benchmarks that test it.
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\appendix
+\section{Prompts}
+\todo{Include \texttt{bitsbench prompt <domain> <level>} output for each configuration and the
+checkpoint prompt.}
+
+\section{Hypothesis-space construction}
+Spaces are built by enumerating each grammar in order of description length, evaluating every
+hypothesis on the full input space (for lists, the reference pool), discarding unbalanced binary rules,
+and keeping the first hypothesis of each equivalence class. For lists, prefixes that agree on the pool
+are pruned before extension, which is exact because extensions of equal prefixes are equal. For regular
+languages, all DFAs with $k\le 4$ states and start state $q_0$ are simulated on all 510 strings with a
+prefix trie.
+
+\end{document}
