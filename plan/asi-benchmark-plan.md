@@ -134,7 +134,7 @@ Base rate of true claims is 0.5 (0.2 as an ablation).
 ## 4. Experiments
 
 **Models.** Pin exact IDs and dates at run time.
-- Judges: an open-weight ladder (e.g. Qwen-class at 4B, 8B and 32B via cheap APIs), Haiku/mini/Flash-class models, and one frontier anchor.
+- Judges: an open-weight ladder (small, medium and large open-weight models via cheap APIs), small proprietary models, and one frontier anchor.
 - Strong side: 2–3 frontier models from different providers, plus kissat, CP-SAT and annealers given CPU-hours.
 
 **Baselines.** Always accept, always reject, random spot-checks, a classifier on the solver's stated confidence, and the reference overseers (a)–(c).
